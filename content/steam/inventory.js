@@ -51,16 +51,28 @@
     return observer;
   }
 
+  async function logCachedTrades() {
+    if (!window.FIKEXT_TRADES_STORAGE?.loadTrades) return;
+    const cached = await window.FIKEXT_TRADES_STORAGE.loadTrades();
+    if (cached) {
+      console.log(`[FIKEXT] Loaded ${cached.entries?.length ?? 0} cached trades (storedAt: ${new Date(cached.storedAt).toISOString()})`, cached.entries);
+    } else {
+      console.log('[FIKEXT] No cached trades found');
+    }
+  }
+
   function waitForContainer() {
     const existing = document.querySelector(ROOT_SELECTOR);
     if (existing) {
       initObserver();
+      logCachedTrades();
       return;
     }
 
     const bodyObserver = new MutationObserver(() => {
       if (document.querySelector(ROOT_SELECTOR)) {
         initObserver();
+        logCachedTrades();
         bodyObserver.disconnect();
       }
     });

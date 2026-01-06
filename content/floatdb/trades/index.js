@@ -134,8 +134,7 @@
     return str;
   }
 
-  function downloadCsv(trades) {
-    const grouped = groupTrades(trades);
+  function downloadCsv(grouped) {
     if (!grouped.length) return;
     const header = ["NAME", "WEAR", "PRICE", "QTY"];
     const lines = [header];
@@ -267,9 +266,11 @@
         time,
       }));
 
+      const grouped = groupTrades(relevantTrades);
+
       downloadResults(exportable);
-      downloadCsv(relevantTrades);
-      saveToStorage(exportable);
+      downloadCsv(grouped);
+      saveToStorage(grouped);
       showMessage(ui.container, `${exportable.length} trades exported`, "success");
     } finally {
       state.isScraping = false;

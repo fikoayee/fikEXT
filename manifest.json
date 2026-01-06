@@ -26,7 +26,7 @@
     },
     {
       "matches": ["https://steamcommunity.com/profiles/*/inventory*"],
-      "js": ["content/steam/inventory.js"],
+      "js": ["content/floatdb/shared/storage.js", "content/steam/inventory.js"],
       "run_at": "document_idle"
     }
   ]

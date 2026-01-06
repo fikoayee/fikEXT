@@ -23,6 +23,11 @@
         "content/floatdb/trades/index.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://steamcommunity.com/profiles/*/inventory*"],
+      "js": ["content/steam/inventory.js"],
+      "run_at": "document_idle"
     }
   ]
 }

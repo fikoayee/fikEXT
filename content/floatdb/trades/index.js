@@ -269,6 +269,7 @@
 
       downloadResults(exportable);
       downloadCsv(relevantTrades);
+      saveToStorage(exportable);
       showMessage(ui.container, `${exportable.length} trades exported`, "success");
     } finally {
       state.isScraping = false;
@@ -280,6 +281,7 @@
   const TARGET_PATH = "/profile/trades";
   const TARGET_MODE = "purchased";
   const pageUtils = window.FIKEXT_PAGE_UTILS;
+  const tradesStorage = window.FIKEXT_TRADES_STORAGE;
 
   function isTargetPage() {
     if (!pageUtils?.isPage) {
@@ -333,4 +335,9 @@
   });
 
   mountUi();
+
+  function saveToStorage(entries) {
+    if (!tradesStorage?.saveTrades) return;
+    tradesStorage.saveTrades(entries);
+  }
 })();

@@ -7,6 +7,7 @@
     "service_worker": "background/index.js",
     "type": "module"
   },
+  "permissions": ["storage"],
   "content_scripts": [
     {
       "matches": ["https://csfloat.com/search*"],
@@ -17,6 +18,7 @@
       "matches": ["https://csfloat.com/*"],
       "js": [
         "content/floatdb/shared/page.js",
+        "content/floatdb/shared/storage.js",
         "content/floatdb/trades/const.js",
         "content/floatdb/trades/index.js"
       ],

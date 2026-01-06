@@ -5,7 +5,7 @@ FloatDB
 
 - [x] Add highlight for items that match desired ROI
 - [ ] Add redirect to item page
-- [ ] Add data scraping for bought items 
+- [x] Add data scraping for bought items 
 - [ ] Add auto-fill filter inputs (price, wear, etc.)
 
 Steam 

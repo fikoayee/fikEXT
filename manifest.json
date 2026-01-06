@@ -12,6 +12,15 @@
       "matches": ["https://csfloat.com/search*"],
       "js": ["content/floatdb/item/const.js", "content/floatdb/item/index.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://csfloat.com/*"],
+      "js": [
+        "content/floatdb/shared/page.js",
+        "content/floatdb/trades/const.js",
+        "content/floatdb/trades/index.js"
+      ],
+      "run_at": "document_idle"
     }
   ]
 }

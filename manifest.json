@@ -25,8 +25,15 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://steamcommunity.com/profiles/*/inventory*"],
-      "js": ["content/floatdb/shared/storage.js", "content/steam/inventory.js"],
+      "matches": [
+        "https://steamcommunity.com/profiles/*/inventory*",
+        "https://steamcommunity.com/id/*/inventory*"
+      ],
+      "js": [
+        "content/floatdb/shared/storage.js",
+        "content/steam/const.js",
+        "content/steam/inventory.js"
+      ],
       "run_at": "document_idle"
     }
   ]

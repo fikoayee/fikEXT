@@ -24,17 +24,7 @@
     }),
     CLEANUP: Object.freeze({
       cardProps: Object.freeze(['background', 'border', 'box-shadow']),
-      chipProps: Object.freeze([
-        'background',
-        'color',
-        'padding',
-        'border-radius',
-        'font-weight',
-        'font-size',
-        'display',
-        'align-items',
-        'gap',
-      ]),
+      chipProps: Object.freeze(['background', 'color', 'padding', 'border-radius', 'border', 'font-weight', 'font-size', 'display', 'align-items', 'gap']),
     }),
   });
 })();

@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "FIKEXT",
+  "version": "0.1.0",
+  "description": "Fikers Sigma",
+  "background": {
+    "service_worker": "background/index.js",
+    "type": "module"
+  }
+}

@@ -3,6 +3,18 @@
   "name": "FIKEXT",
   "version": "0.1.0",
   "description": "Fikers Sigma",
+  "icons": {
+    "16": "assets/fikext-icons/logo-128.png",
+    "32": "assets/fikext-icons/logo-128.png",
+    "48": "assets/fikext-icons/logo-128.png",
+    "128": "assets/fikext-icons/logo-128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "assets/fikext-icons/logo-128.png",
+      "32": "assets/fikext-icons/logo-128.png"
+    }
+  },
   "background": {
     "service_worker": "background/index.js",
     "type": "module"
@@ -38,3 +50,4 @@
     }
   ]
 }
+

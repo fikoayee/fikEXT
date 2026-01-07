@@ -2,7 +2,7 @@
   if (window.FIKEXT_CONST) return;
 
   window.FIKEXT_CONST = Object.freeze({
-    ROI_THRESHOLD: 70,
+    ROI_THRESHOLD: 58,
     SELECTORS: {
       card: 'mat-card.item-card, .item-card',
       chip: '.seller-details .betterfloat-steamlink span:first-child',

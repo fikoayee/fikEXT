@@ -42,6 +42,9 @@
   }
 
   let summaryButton = null;
+  let clearButton = null;
+  let chipInfoBlock = null;
+  let chipActions = null;
   const summaryState = { entry: null };
 
   function ensureChip() {
@@ -51,6 +54,11 @@
       chip.id = chipConfig.id;
       Object.assign(chip.style, chipConfig.theme.container);
 
+      chipInfoBlock = document.createElement('div');
+      chip.appendChild(chipInfoBlock);
+
+      chipActions = document.createElement('div');
+      Object.assign(chipActions.style, chipConfig.theme.actions);
       summaryButton = document.createElement('button');
       summaryButton.type = 'button';
       Object.assign(summaryButton.style, chipConfig.theme.button);
@@ -60,7 +68,22 @@
         downloadSummary(summaryState.entry);
       });
 
-      chip.appendChild(summaryButton);
+      clearButton = document.createElement('button');
+      clearButton.type = 'button';
+      Object.assign(clearButton.style, chipConfig.theme.clearButton);
+      clearButton.textContent = chipConfig.labels.clear;
+      clearButton.addEventListener('click', async () => {
+        if (!window.FIKEXT_TRADES_STORAGE?.clearSaleEntries) return;
+        const shouldClear = window.confirm(chipConfig.labels.clearConfirm);
+        if (!shouldClear) return;
+        await window.FIKEXT_TRADES_STORAGE.clearSaleEntries();
+        console.log('[FIKEXT] Cleared persisted sale entries');
+        logPersistedSalesSummary();
+      });
+
+      chipActions.appendChild(summaryButton);
+      chipActions.appendChild(clearButton);
+      chip.appendChild(chipActions);
       document.body.appendChild(chip);
     }
     return chip;
@@ -68,8 +91,11 @@
 
   function renderPriceChip(group) {
     const chip = ensureChip();
-    const infoBlock = document.createElement('div');
-    infoBlock.innerHTML = `
+    if (!chipInfoBlock) {
+      chipInfoBlock = document.createElement('div');
+      chip.insertBefore(chipInfoBlock, chipActions || null);
+    }
+    chipInfoBlock.innerHTML = `
       <span style="${inlineStyle(chipConfig.theme.title)}">
         ${chipConfig.labels.title}
       </span>
@@ -83,10 +109,6 @@
         </span>
       </div>
     `;
-
-    chip.innerHTML = '';
-    chip.appendChild(infoBlock);
-    chip.appendChild(summaryButton);
 
     if (group) {
       summaryState.entry = {
@@ -115,6 +137,9 @@
     if (chip) chip.remove();
     summaryState.entry = null;
     summaryButton = null;
+    clearButton = null;
+    chipInfoBlock = null;
+    chipActions = null;
   }
 
   function compareWithCache(currentFloat) {
@@ -222,6 +247,7 @@
   }
 
   setupSaleLogging();
+  logPersistedSalesSummary();
 
   function inlineStyle(styleObj = {}) {
     return Object.entries(styleObj)
@@ -328,14 +354,18 @@
       }
     }
 
-    console.log('[FIKEXT] Sale attempt', {
+    const payload = {
       item: entry.item,
       wear: entry.wear,
       float: entry.float,
       avgPrice: entry.avgPrice,
       qty: entry.qty,
       salePrice: salePrice ?? null,
-    });
+      loggedAt: new Date().toISOString(),
+    };
+
+    console.log('[FIKEXT] Sale attempt', payload);
+    persistSaleRecord(payload);
   }
 
   function cleanupPendingSales() {
@@ -367,5 +397,28 @@
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+  }
+
+  async function logPersistedSalesSummary() {
+    if (!window.FIKEXT_TRADES_STORAGE?.loadSaleEntries) return;
+    try {
+      const stored = await window.FIKEXT_TRADES_STORAGE.loadSaleEntries();
+      const count = stored?.entries?.length ?? 0;
+      if (count) {
+        const updatedAt = stored.updatedAt ? new Date(stored.updatedAt).toISOString() : 'unknown';
+        console.log(`[FIKEXT] Loaded ${count} persisted sale entries (updatedAt: ${updatedAt})`, stored.entries);
+      } else {
+        console.log('[FIKEXT] No persisted sale entries found');
+      }
+    } catch (error) {
+      console.warn('[FIKEXT] Failed to read persisted sale entries', error);
+    }
+  }
+
+  function persistSaleRecord(record) {
+    if (!record || !window.FIKEXT_TRADES_STORAGE?.appendSaleEntry) return;
+    window.FIKEXT_TRADES_STORAGE.appendSaleEntry(record).catch((error) => {
+      console.warn('[FIKEXT] Failed to append sale entry', error);
+    });
   }
 })();

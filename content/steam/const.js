@@ -24,7 +24,7 @@
       backdropFilter: "blur(12px)",
       minWidth: "180px",
       boxSizing: "border-box",
-      pointerEvents: "none",
+      pointerEvents: "auto",
     }),
     title: Object.freeze({
       fontSize: "0.72rem",
@@ -46,6 +46,25 @@
       letterSpacing: "0.04em",
       textTransform: "uppercase",
     }),
+    button: Object.freeze({
+      marginTop: "0.25rem",
+      padding: "0.4rem 0.75rem",
+      borderRadius: "999px",
+      fontSize: "0.72rem",
+      fontWeight: "600",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      border: "1px solid rgba(255,255,255,0.2)",
+      background: "linear-gradient(120deg, #ec4899, #a855f7)",
+      color: "#fff",
+      cursor: "pointer",
+      transition: "transform 160ms ease, opacity 160ms ease",
+    }),
+    buttonDisabled: Object.freeze({
+      opacity: "0.4",
+      cursor: "not-allowed",
+      background: "linear-gradient(120deg, #475569, #334155)",
+    }),
   });
 
   window.FIKEXT_STEAM_CONST = Object.freeze({
@@ -54,6 +73,11 @@
       labels: Object.freeze({
         title: "Avg Price",
         qty: "QTY:",
+        summary: "Summary",
+        notFound: "NOT FOUND",
+      }),
+      messages: Object.freeze({
+        noMatch: "No cached trade found for this float.",
       }),
       theme,
     }),

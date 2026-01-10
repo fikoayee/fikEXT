@@ -84,22 +84,24 @@
           ${qtyValue}
         </span>
       </div>
-      <button type="button" style="${inlineStyle(chipConfig.theme.button)}">
-        ${chipConfig.labels.summary}
-      </button>
+      <div style="display:flex; flex-direction:column; gap:0.25rem;">
+        <button type="button" data-fikext-action="summary" style="${inlineStyle(chipConfig.theme.button)}">
+          ${chipConfig.labels.summary}
+        </button>
+        <button type="button" data-fikext-action="clear" style="${inlineStyle(chipConfig.theme.buttonDanger)}">
+          ${chipConfig.labels.clearData}
+        </button>
+      </div>
     `;
 
-    const summaryButton = chip.querySelector('button');
-    if (summaryButton) {
-      summaryButton.addEventListener('click', handleSummaryClick);
-    }
+    chip.querySelector('[data-fikext-action="summary"]')?.addEventListener('click', handleSummaryClick);
+    chip.querySelector('[data-fikext-action="clear"]')?.addEventListener('click', handleClearDataClick);
   }
 
-  async function handleSummaryClick(event) {
-    event?.preventDefault?.();
+  async function logListingHistory() {
     if (!window.FIKEXT_LISTINGS_STORAGE?.loadListings) {
       console.warn('[FIKEXT] Listings storage API unavailable');
-      return;
+      return null;
     }
     try {
       const history = (await window.FIKEXT_LISTINGS_STORAGE.loadListings()) || {
@@ -126,8 +128,35 @@
           })),
         );
       }
+      return history;
     } catch (error) {
       console.warn('[FIKEXT] Failed to load listing history', error);
+      return null;
+    }
+  }
+
+  async function handleSummaryClick(event) {
+    event?.preventDefault?.();
+    await logListingHistory();
+  }
+
+  async function handleClearDataClick(event) {
+    event?.preventDefault?.();
+    if (!window.FIKEXT_LISTINGS_STORAGE?.clearListings) {
+      console.warn('[FIKEXT] Listings storage API unavailable');
+      return;
+    }
+    const shouldClear =
+      typeof window.confirm === 'function'
+        ? window.confirm('Clear tracked listings history?')
+        : true;
+    if (!shouldClear) return;
+    try {
+      await window.FIKEXT_LISTINGS_STORAGE.clearListings();
+      console.log('[FIKEXT] Listing history cleared');
+      await logListingHistory();
+    } catch (error) {
+      console.warn('[FIKEXT] Failed to clear listing history', error);
     }
   }
 

@@ -1,5 +1,4 @@
 (() => {
-  if (window.FIKEXT_TRADES_STORAGE && window.FIKEXT_LISTINGS_STORAGE) return;
 
   const TRADES_STORAGE_KEY = "fikext_trades_cache";
   const LISTINGS_STORAGE_KEY = "fikext_listings_history";
@@ -14,6 +13,19 @@
       }
     } catch (error) {
       console.warn(`[FIKEXT] Failed to persist data for ${key}`, error);
+      throw error;
+    }
+  }
+
+  async function removeStorage(key) {
+    try {
+      if (chrome?.storage?.local) {
+        await chrome.storage.local.remove(key);
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.warn(`[FIKEXT] Failed to remove data for ${key}`, error);
       throw error;
     }
   }
@@ -60,13 +72,19 @@
     return (await readStorage(LISTINGS_STORAGE_KEY)) || { storedAt: null, entries: [] };
   }
 
-  window.FIKEXT_TRADES_STORAGE ??= Object.freeze({
+  async function clearListings() {
+    await removeStorage(LISTINGS_STORAGE_KEY);
+    return { storedAt: null, entries: [] };
+  }
+
+  window.FIKEXT_TRADES_STORAGE = Object.freeze({
     saveTrades,
     loadTrades,
   });
 
-  window.FIKEXT_LISTINGS_STORAGE ??= Object.freeze({
+  window.FIKEXT_LISTINGS_STORAGE = Object.freeze({
     appendListing,
     loadListings,
+    clearListings,
   });
 })();

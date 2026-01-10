@@ -60,6 +60,20 @@
       cursor: "pointer",
       transition: "background 0.2s ease, border-color 0.2s ease",
     }),
+    buttonDanger: Object.freeze({
+      marginTop: "0.1rem",
+      padding: "0.4rem 0.65rem",
+      borderRadius: "8px",
+      border: "1px solid rgba(248, 113, 113, 0.4)",
+      background: "rgba(248, 113, 113, 0.12)",
+      color: "#fecaca",
+      fontSize: "0.68rem",
+      fontWeight: "600",
+      letterSpacing: "0.04em",
+      textTransform: "uppercase",
+      cursor: "pointer",
+      transition: "background 0.2s ease, border-color 0.2s ease",
+    }),
   });
 
   window.FIKEXT_STEAM_CONST = Object.freeze({
@@ -69,6 +83,7 @@
         title: "Avg Price",
         qty: "QTY:",
         summary: "Summary",
+        clearData: "Clear Data",
         notFound: "NOT FOUND",
         notFoundSubtitle: "No cached trades for this float",
         notFoundQty: "QTY: —",

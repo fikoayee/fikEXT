@@ -11,7 +11,7 @@
     selectedItems:
       '.inventory_page_left .item.selectedSell, .inventory_page_left .item.activeInfo.selectedSell',
     buttons: Object.freeze([
-      '#market_sell_dialog_accept',
+      '#market_sell_dialog_ok',
       '.marketActionQuickSell',
       '.marketActionInstantSell',
       '#quicksellbtn',
@@ -22,6 +22,7 @@
   let lastFloatValue = null;
   let cachedGroups = [];
   let tradesLoaded = false;
+  let lastMatchedName = null;
 
   function ensureChip() {
     let chip = document.getElementById(chipConfig.id);
@@ -182,6 +183,7 @@
     if (!tradesLoaded) return;
 
     if (!cachedGroups?.length) {
+      lastMatchedName = null;
       renderPriceChip(null);
       console.log(`[FIKEXT] Float ${currentFloat} not found (no cached trades available)`);
       return;
@@ -195,12 +197,14 @@
         console.log(
           `[FIKEXT] Float ${currentFloat} matches cached trade: ${group.name} (${group.wear})`,
         );
+        lastMatchedName = group?.name ?? null;
         logMatchedItemDetails(currentFloat, group, floats);
         renderPriceChip(group);
         return;
       }
     }
 
+    lastMatchedName = null;
     renderPriceChip(null);
     console.log(`[FIKEXT] Float ${currentFloat} not found in cached trades`);
   }
@@ -271,6 +275,43 @@
     const normalized = text.replace(/[^0-9.,-]/g, '').replace(',', '.');
     const value = parseFloat(normalized);
     return Number.isFinite(value) ? value : null;
+  }
+
+  function isElementVisible(node) {
+    if (!node) return false;
+    const style = window.getComputedStyle?.(node);
+    if (style) {
+      if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity || '1') === 0) {
+        return false;
+      }
+    }
+    if (node.style?.display === 'none') return false;
+    if (node.getAttribute('hidden') !== null) return false;
+    if (node.classList?.contains('hidden')) return false;
+    return true;
+  }
+
+  function getActiveSellDialogError() {
+    const errorNode = document.getElementById('market_sell_dialog_error');
+    if (!errorNode) return '';
+    if (!isElementVisible(errorNode)) return '';
+    const text = errorNode.textContent?.trim() ?? '';
+    return text || '';
+  }
+
+  function nextAnimationFramePromise() {
+    return new Promise((resolve) => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => resolve());
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
+  }
+
+  async function waitForSellDialogSettle() {
+    await nextAnimationFramePromise();
+    await nextAnimationFramePromise();
   }
 
   function formatFloatDisplay(value) {
@@ -394,6 +435,17 @@
     return pullNameFromDescriptor(active.description || active);
   }
 
+  function resolveFallbackName(primaryName = null) {
+    if (primaryName && primaryName.trim()) return primaryName.trim();
+    const activeName = extractActiveInventoryName();
+    if (activeName && activeName.trim()) return activeName.trim();
+    if (lastMatchedName && lastMatchedName.trim()) return lastMatchedName.trim();
+    const hoverName =
+      document.querySelector('#iteminfo1_item_name, .hover_item_name, .item_desc_content .item_name')
+        ?.textContent || '';
+    return hoverName.trim() || null;
+  }
+
   function extractItemName(itemEl) {
     if (!itemEl) return null;
     const datasetCandidates = [
@@ -450,11 +502,7 @@
         ?.textContent?.trim() ?? '';
     if (metaName) return metaName;
 
-    const hoverName =
-      extractActiveInventoryName() ||
-      document.querySelector('#iteminfo1_item_name, .hover_item_name, .item_desc_content .item_name')?.textContent ||
-      '';
-    return hoverName.trim() || null;
+    return null;
   }
 
   function extractFloatFromItemElement(itemEl) {
@@ -493,10 +541,7 @@
         {
           float: extractFloat() ?? lastFloatValue,
           price: dialogPrice || '?',
-          name:
-            extractActiveInventoryName() ||
-            document.querySelector('#iteminfo1_item_name, .hover_item_name')?.textContent?.trim() ||
-            null,
+          name: resolveFallbackName(),
         },
       ];
     }
@@ -504,7 +549,7 @@
     return selectedItems.map((itemEl) => ({
       float: extractFloatFromItemElement(itemEl) ?? extractFloat() ?? lastFloatValue,
       price: dialogPrice || extractPriceFromItemElement(itemEl) || '?',
-      name: extractItemName(itemEl),
+      name: resolveFallbackName(extractItemName(itemEl)),
     }));
   }
 
@@ -516,30 +561,137 @@
     )}:${pad(date.getMinutes())}`;
   }
 
+  function makeNameFloatKey(name, floatValue) {
+    const trimmedName = name?.trim();
+    const numeric = Number(floatValue);
+    if (!trimmedName || trimmedName === chipConfig.labels.notFound || !Number.isFinite(numeric)) {
+      return null;
+    }
+    return `${trimmedName}::${formatExactFloat(numeric)}`;
+  }
+
+  function collectExistingNameFloatKeys(historyEntries = [], keyToIndex = new Map()) {
+    const keys = new Set();
+    historyEntries.forEach((record, index) => {
+      const floats = Array.isArray(record?.floats) ? record.floats : [];
+      const namePool = Array.from(
+        new Set(
+          [
+            ...(Array.isArray(record?.names) ? record.names : []),
+            record?.name,
+          ].filter((value) => Boolean(value && value.trim())),
+        ),
+      );
+      namePool.forEach((name) => {
+        floats.forEach((floatValue) => {
+          const key = makeNameFloatKey(name, floatValue);
+          if (key) {
+            keys.add(key);
+            keyToIndex.set(key, index);
+          }
+        });
+      });
+    });
+    return keys;
+  }
+
   async function persistListingHistory(entries, source) {
-    if (!entries?.length || !window.FIKEXT_LISTINGS_STORAGE?.appendListing) return;
-    const timestamp = Date.now();
-    const floats = entries
-      .map((entry) => (Number.isFinite(entry.float) ? Number(entry.float) : null))
-      .filter((value) => value !== null);
-    const uniqueNames = Array.from(
-      new Set(entries.map((entry) => entry.name).filter((name) => Boolean(name?.trim()))),
-    );
-    const record = {
-      listedAt: timestamp,
-      listedAtDisplay: formatHistoryDate(timestamp),
-      price: formatPriceDisplay(entries[0]?.price ?? '?'),
-      qty: entries.length,
-      floats,
-      name: uniqueNames[0] ?? chipConfig.labels.notFound,
-      names: uniqueNames,
-      source,
-    };
+    const storageApi = window.FIKEXT_LISTINGS_STORAGE;
+    if (!entries?.length || !storageApi?.appendListing) return;
+
+    const dialogError = getActiveSellDialogError();
+    if (dialogError) {
+      console.log(`[FIKEXT] Skipping listing history persist (dialog error: ${dialogError})`);
+      return;
+    }
+
+    const validEntries = entries.filter((entry) => {
+      const trimmed = entry?.name?.trim();
+      return Boolean(trimmed && trimmed !== chipConfig.labels.notFound);
+    });
+
+    if (!validEntries.length) {
+      console.log('[FIKEXT] Skipping listing history persist (no named entries to store)');
+      return;
+    }
+
+    let existingEntries = [];
+    try {
+      const history = (await storageApi.loadListings?.()) || { entries: [] };
+      existingEntries = Array.isArray(history.entries) ? [...history.entries] : [];
+    } catch (error) {
+      console.warn('[FIKEXT] Failed to load existing listings for dedupe', error);
+    }
+
+    const keyToIndex = new Map();
+    const seenKeys = collectExistingNameFloatKeys(existingEntries, keyToIndex);
+    const dedupedEntries = [];
+    let hadPriceUpdates = false;
+
+    validEntries.forEach((entry) => {
+      const key = makeNameFloatKey(entry.name, entry.float);
+      if (!key) return;
+      if (seenKeys.has(key)) {
+        const recordIndex = keyToIndex.get(key);
+        if (recordIndex !== undefined) {
+          const targetRecord = existingEntries[recordIndex];
+          if (targetRecord) {
+            const newTimestamp = Date.now();
+            const newPrice = formatPriceDisplay(entry.price ?? targetRecord.price ?? '?');
+            if (targetRecord.price !== newPrice) {
+              targetRecord.price = newPrice;
+              hadPriceUpdates = true;
+            }
+            targetRecord.listedAt = newTimestamp;
+            targetRecord.listedAtDisplay = formatHistoryDate(newTimestamp);
+            targetRecord.source = source;
+          }
+        }
+        return;
+      }
+      seenKeys.add(key);
+      dedupedEntries.push(entry);
+    });
+
+    let nextEntries = existingEntries;
+    if (dedupedEntries.length) {
+      const timestamp = Date.now();
+      const floats = dedupedEntries
+        .map((entry) => (Number.isFinite(entry.float) ? Number(entry.float) : null))
+        .filter((value) => value !== null);
+      const uniqueNames = Array.from(
+        new Set(
+          dedupedEntries.map((entry) => entry.name).filter((name) => Boolean(name?.trim())),
+        ),
+      );
+      const record = {
+        listedAt: timestamp,
+        listedAtDisplay: formatHistoryDate(timestamp),
+        price: formatPriceDisplay(dedupedEntries[0]?.price ?? '?'),
+        qty: dedupedEntries.length,
+        floats,
+        name: uniqueNames[0] ?? chipConfig.labels.notFound,
+        names: uniqueNames,
+        source,
+      };
+      nextEntries = [record, ...existingEntries];
+    }
+
+    if (!dedupedEntries.length && !hadPriceUpdates) {
+      console.log('[FIKEXT] Skipping listing history persist (entries already stored)');
+      return;
+    }
 
     try {
-      await window.FIKEXT_LISTINGS_STORAGE.appendListing(record);
+      if (storageApi.saveListings) {
+        await storageApi.saveListings(nextEntries);
+      } else if (dedupedEntries.length) {
+        await storageApi.appendListing(nextEntries[0]);
+      } else {
+        console.warn('[FIKEXT] saveListings unavailable; price updates not persisted');
+      }
     } catch (error) {
-      console.warn('[FIKEXT] Failed to persist listing history', error, record);
+      console.warn('[FIKEXT] Failed to persist listing history', error, nextEntries);
     }
   }
 
@@ -555,7 +707,22 @@
         `[FIKEXT] listing "${nameDisplay}" for PRICE: ${priceDisplay} FLOAT: ${friendlyFloatDisplay} (raw: ${exactFloatDisplay}) (source: ${source}${suffix})`,
       );
     });
-    persistListingHistory(entries, source);
+
+    waitForSellDialogSettle()
+      .then(() => {
+        const dialogError = getActiveSellDialogError();
+        if (dialogError) {
+          console.log(
+            `[FIKEXT] Skipping listing history persist (dialog error: ${dialogError})`,
+          );
+          return;
+        }
+        persistListingHistory(entries, source);
+      })
+      .catch((error) => {
+        console.warn('[FIKEXT] Sell dialog settle wait failed', error);
+        persistListingHistory(entries, source);
+      });
   }
 
   function attachListingButtons() {
